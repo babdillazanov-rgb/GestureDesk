@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestureDesk — Панель управления</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0a0f;
+    --surface:  #12121a;
+    --border:   #1e1e2e;
+    --accent:   #7c3aed;
+    --accent2:  #06d6a0;
+    --accent3:  #f72585;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Фоновая сетка */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── ШАПКА ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 24px rgba(124,58,237,0.4);
+  }
+
+  .logo h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  /* Статус-индикатор */
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 8px var(--accent2);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.offline { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* ── КАРТОЧКИ СТАТУСА ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0.6;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .stat-value.green  { color: var(--accent2); }
+  .stat-value.purple { color: var(--accent);  }
+  .stat-value.pink   { color: var(--accent3); }
+
+  /* ── ОСНОВНАЯ СЕТКА ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .panel-badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    background: rgba(124,58,237,0.2);
+    color: var(--accent);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 100px;
+    padding: 2px 10px;
+  }
+
+  /* ── ЛОГ КОМАНД ── */
+  .log-list {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid transparent;
+    animation: slideIn 0.3s ease;
+    transition: border-color 0.2s;
+  }
+
+  .log-item:hover { border-color: var(--border); }
+
+  .log-item.new {
+    border-color: rgba(6,214,160,0.3);
+    background: rgba(6,214,160,0.05);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-icon { font-size: 1.1rem; min-width: 24px; text-align: center; }
+
+  .log-text { flex: 1; }
+
+  .log-cmd {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .log-type {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .log-time {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .tag-gesture {
+    display: inline-block;
+    background: rgba(247,37,133,0.15);
+    color: var(--accent3);
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 0.6rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+  }
+
+  .tag-voice {
+    display: inline-block;
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 0.6rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+  }
+
+  /* ── СПИСОК ЖЕСТОВ ── */
+  .gesture-grid {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .gesture-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .gesture-item:hover {
+    background: rgba(124,58,237,0.08);
+    border-color: rgba(124,58,237,0.3);
+    transform: translateY(-1px);
+  }
+
+  .gesture-item.active {
+    background: rgba(6,214,160,0.1);
+    border-color: rgba(6,214,160,0.4);
+    box-shadow: 0 0 16px rgba(6,214,160,0.1);
+  }
+
+  .gesture-emoji { font-size: 1.5rem; }
+
+  .gesture-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .gesture-desc {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* ── БЫСТРЫЕ КОМАНДЫ ── */
+  .commands-panel { grid-column: 1 / -1; }
+
+  .commands-grid {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .cmd-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--sans);
+  }
+
+  .cmd-btn:hover {
+    background: rgba(124,58,237,0.1);
+    border-color: rgba(124,58,237,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(124,58,237,0.15);
+  }
+
+  .cmd-btn:active { transform: translateY(0); }
+
+  .cmd-btn.fired {
+    background: rgba(6,214,160,0.12);
+    border-color: rgba(6,214,160,0.5);
+  }
+
+  .cmd-emoji { font-size: 1.4rem; }
+  .cmd-label { font-size: 0.72rem; font-weight: 700; color: var(--text); }
+  .cmd-voice { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
+
+  /* ── НИЖНЯЯ ПАНЕЛЬ ── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* Микрофон-индикатор */
+  .mic-section {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .mic-visual {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 36px;
+  }
+
+  .mic-bar {
+    width: 4px;
+    background: var(--accent2);
+    border-radius: 2px;
+    animation: micAnim 0.8s ease-in-out infinite alternate;
+    opacity: 0.3;
+  }
+
+  .mic-bar.active { opacity: 1; }
+
+  .mic-bar:nth-child(1) { height: 12px; animation-delay: 0.0s; }
+  .mic-bar:nth-child(2) { height: 24px; animation-delay: 0.1s; }
+  .mic-bar:nth-child(3) { height: 36px; animation-delay: 0.2s; }
+  .mic-bar:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+  .mic-bar:nth-child(5) { height: 30px; animation-delay: 0.4s; }
+  .mic-bar:nth-child(6) { height: 14px; animation-delay: 0.5s; }
+  .mic-bar:nth-child(7) { height: 26px; animation-delay: 0.6s; }
+
+  @keyframes micAnim {
+    from { transform: scaleY(0.3); }
+    to   { transform: scaleY(1); }
+  }
+
+  .mic-info { flex: 1; }
+  .mic-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+  .mic-sub   { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+
+  /* Камера-индикатор */
+  .cam-section {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .cam-preview {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cam-preview::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(247,37,133,0.2), transparent);
+    animation: camScan 2s linear infinite;
+  }
+
+  @keyframes camScan {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .cam-info { flex: 1; }
+  .cam-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+  .cam-sub   { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+
+  .fingers-display {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent3);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ШАПКА -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🖐️</div>
+      <h1>Gesture<span>Desk</span></h1>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">СИСТЕМА АКТИВНА</span>
+    </div>
+  </header>
+
+  <!-- СТАТИСТИКА -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Всего команд</div>
+      <div class="stat-value green" id="totalCount">0</div>
+      <div class="stat-sub">за сессию</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Жестов</div>
+      <div class="stat-value pink" id="gestureCount">0</div>
+      <div class="stat-sub">распознано</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Голосовых</div>
+      <div class="stat-value purple" id="voiceCount">0</div>
+      <div class="stat-sub">выполнено</div>
+    </div>
+  </div>
+
+  <!-- ОСНОВНАЯ СЕТКА -->
+  <div class="main-grid">
+
+    <!-- ЛОГ КОМАНД -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 Лог команд</div>
+        <div class="panel-badge" id="logBadge">0 записей</div>
+      </div>
+      <div class="log-list" id="logList">
+        <div style="padding:20px; text-align:center; color:var(--muted); font-family:var(--mono); font-size:0.75rem;">
+          Ожидание команд...
+        </div>
+      </div>
+    </div>
+
+    <!-- ЖЕСТЫ -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">👋 Жесты</div>
+        <div class="panel-badge">5 жестов</div>
+      </div>
+      <div class="gesture-grid" id="gestureGrid">
+        <div class="gesture-item" data-gesture="0">
+          <div class="gesture-emoji">✊</div>
+          <div><div class="gesture-name">Кулак</div><div class="gesture-desc">Пауза / Плей</div></div>
+        </div>
+        <div class="gesture-item" data-gesture="1">
+          <div class="gesture-emoji">☝️</div>
+          <div><div class="gesture-name">1 палец</div><div class="gesture-desc">Тише</div></div>
+        </div>
+        <div class="gesture-item" data-gesture="2">
+          <div class="gesture-emoji">✌️</div>
+          <div><div class="gesture-name">2 пальца</div><div class="gesture-desc">Громче</div></div>
+        </div>
+        <div class="gesture-item" data-gesture="3">
+          <div class="gesture-emoji">🤟</div>
+          <div><div class="gesture-name">3 пальца</div><div class="gesture-desc">След. трек</div></div>
+        </div>
+        <div class="gesture-item" data-gesture="5">
+          <div class="gesture-emoji">🖐️</div>
+          <div><div class="gesture-name">Ладонь</div><div class="gesture-desc">Скриншот</div></div>
+        </div>
+        <div class="gesture-item" style="opacity:0.3; cursor:default;">
+          <div class="gesture-emoji">➕</div>
+          <div><div class="gesture-name">Добавить</div><div class="gesture-desc">скоро...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- БЫСТРЫЕ КОМАНДЫ -->
+    <div class="panel commands-panel">
+      <div class="panel-header">
+        <div class="panel-title">🎤 Голосовые команды</div>
+        <div class="panel-badge">нажми чтобы симулировать</div>
+      </div>
+      <div class="commands-grid">
+        <button class="cmd-btn" onclick="simulateVoice('📺 YouTube', 'открой ютуб')">
+          <span class="cmd-emoji">📺</span>
+          <span class="cmd-label">YouTube</span>
+          <span class="cmd-voice">"открой ютуб"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('🔍 Google', 'открой гугл')">
+          <span class="cmd-emoji">🔍</span>
+          <span class="cmd-label">Google</span>
+          <span class="cmd-voice">"открой гугл"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('📱 WhatsApp', 'ватсап')">
+          <span class="cmd-emoji">📱</span>
+          <span class="cmd-label">WhatsApp</span>
+          <span class="cmd-voice">"ватсап"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('✈️ Telegram', 'телеграм')">
+          <span class="cmd-emoji">✈️</span>
+          <span class="cmd-label">Telegram</span>
+          <span class="cmd-voice">"телеграм"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('📸 Instagram', 'инстаграм')">
+          <span class="cmd-emoji">📸</span>
+          <span class="cmd-label">Instagram</span>
+          <span class="cmd-voice">"инстаграм"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('⏸ Пауза', 'пауза')">
+          <span class="cmd-emoji">⏸</span>
+          <span class="cmd-label">Пауза</span>
+          <span class="cmd-voice">"пауза"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('🔊 Громче', 'громче')">
+          <span class="cmd-emoji">🔊</span>
+          <span class="cmd-label">Громче</span>
+          <span class="cmd-voice">"громче"</span>
+        </button>
+        <button class="cmd-btn" onclick="simulateVoice('📸 Скриншот', 'скриншот')">
+          <span class="cmd-emoji">📸</span>
+          <span class="cmd-label">Скриншот</span>
+          <span class="cmd-voice">"скриншот"</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- НИЖНЯЯ ПАНЕЛЬ -->
+  <div class="bottom-row">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🎤 Микрофон</div>
+      </div>
+      <div class="mic-section">
+        <div class="mic-visual" id="micVisual">
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+          <div class="mic-bar active"></div>
+        </div>
+        <div class="mic-info">
+          <div class="mic-title">Слушаю...</div>
+          <div class="mic-sub" id="micLast">последняя команда: —</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📷 Камера</div>
+      </div>
+      <div class="cam-section">
+        <div class="cam-preview">🖐️</div>
+        <div class="cam-info">
+          <div class="cam-title">MediaPipe активен</div>
+          <div class="cam-sub" id="camLast">пальцев: <span class="fingers-display" id="fingersNum">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── ДАННЫЕ ──
+  let totalCount   = 0;
+  let gestureCount = 0;
+  let voiceCount   = 0;
+  let logEntries   = [];
+
+  // ── ДОБАВИТЬ ЗАПИСЬ В ЛОГ ──
+  function addLog(icon, command, type, isGesture) {
+    const now = new Date();
+    const time = now.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    totalCount++;
+    if (isGesture) gestureCount++;
+    else voiceCount++;
+
+    document.getElementById('totalCount').textContent   = totalCount;
+    document.getElementById('gestureCount').textContent = gestureCount;
+    document.getElementById('voiceCount').textContent   = voiceCount;
+    document.getElementById('logBadge').textContent     = totalCount + ' записей';
+
+    logEntries.unshift({ icon, command, type, time, isGesture });
+    if (logEntries.length > 50) logEntries.pop();
+
+    renderLog();
+  }
+
+  function renderLog() {
+    const list = document.getElementById('logList');
+    list.innerHTML = logEntries.map((e, i) => `
+      <div class="log-item ${i === 0 ? 'new' : ''}">
+        <div class="log-icon">${e.icon}</div>
+        <div class="log-text">
+          <div class="log-cmd">${e.command}</div>
+          <div class="log-type">
+            <span class="${e.isGesture ? 'tag-gesture' : 'tag-voice'}">${e.isGesture ? 'жест' : 'голос'}</span>
+            &nbsp;${e.type}
+          </div>
+        </div>
+        <div class="log-time">${e.time}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── СИМУЛЯЦИЯ ГОЛОСА (кнопки на панели) ──
+  function simulateVoice(label, phrase) {
+    addLog('🎤', label, `"${phrase}"`, false);
+    document.getElementById('micLast').textContent = `последняя: "${phrase}"`;
+
+    // Подсвечиваем кнопку
+    event.currentTarget.classList.add('fired');
+    setTimeout(() => event.currentTarget.classList.remove('fired'), 800);
+  }
+
+  // ── СИМУЛЯЦИЯ ЖЕСТА ──
+  function simulateGesture(fingers, label) {
+    const icons = { 0:'✊', 1:'☝️', 2:'✌️', 3:'🤟', 5:'🖐️' };
+    addLog(icons[fingers] || '👋', label, `${fingers} пальцев`, true);
+    document.getElementById('fingersNum').textContent = fingers;
+
+    // Подсвечиваем жест
+    const item = document.querySelector(`[data-gesture="${fingers}"]`);
+    if (item) {
+      item.classList.add('active');
+      setTimeout(() => item.classList.remove('active'), 1000);
+    }
+  }
+
+  // ── ПОЛУЧЕНИЕ РЕАЛЬНЫХ ДАННЫХ ОТ PYTHON ──
+  let lastLogLength = 0;
+
+  async function fetchState() {
+    try {
+      const res  = await fetch("http://localhost:5000/api/state");
+      const data = await res.json();
+
+      document.getElementById('totalCount').textContent   = data.total;
+      document.getElementById('gestureCount').textContent = data.gestures;
+      document.getElementById('voiceCount').textContent   = data.voices;
+      document.getElementById('logBadge').textContent     = data.total + ' записей';
+
+      if (data.fingers >= 0) {
+        document.getElementById('fingersNum').textContent = data.fingers;
+      }
+
+      // Обновляем лог только если появились новые записи
+      if (data.log.length !== lastLogLength) {
+        lastLogLength = data.log.length;
+        logEntries = data.log;
+        renderLog();
+
+        // Подсвечиваем последний жест
+        if (data.log[0] && data.log[0].type === "жест") {
+          const g = data.fingers;
+          const item = document.querySelector(`[data-gesture="${g}"]`);
+          if (item) {
+            item.classList.add('active');
+            setTimeout(() => item.classList.remove('active'), 1000);
+          }
+        }
+
+        // Обновляем микрофон
+        if (data.log[0] && data.log[0].type === "голос") {
+          document.getElementById('micLast').textContent = `последняя: ${data.log[0].command}`;
+        }
+      }
+
+    } catch (e) {
+      // Python ещё не запущен — показываем демо
+      if (demoIndex < demoCommands.length) {
+        // демо уже запущено
+      }
+    }
+  }
+
+  // Опрашиваем Python каждые 500мс
+  setInterval(fetchState, 500);
+  fetchState();
+
+  // ── АВТО-ДЕМО если Python не запущен ──
+  const demoCommands = [
+    () => simulateGesture(2, '🔊 Громче'),
+    () => simulateVoice('📺 YouTube', 'открой ютуб'),
+    () => simulateGesture(0, '⏸ Пауза/Плей'),
+    () => simulateVoice('🔍 Google: котики', 'найди в гугле котики'),
+    () => simulateGesture(5, '📸 Скриншот'),
+  ];
+
+  let demoIndex = 0;
+  function runDemo() {
+    if (demoIndex < demoCommands.length) {
+      demoCommands[demoIndex]();
+      demoIndex++;
+      setTimeout(runDemo, 1800);
+    }
+  }
+  setTimeout(runDemo, 1200);
+</script>
+</body>
+</html>
